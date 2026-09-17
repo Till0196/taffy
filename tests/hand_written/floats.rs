@@ -213,3 +213,26 @@ fn first_float_in_context_above_context_top() {
     assert_eq!(taffy.layout(pulled_up).unwrap().location, Point { x: 0.0, y: -29.0 });
     assert_eq!(taffy.layout(floated).unwrap().location, Point { x: 0.0, y: 0.0 });
 }
+
+/// CSS2 9.4.3: a relatively positioned float is placed as a float first, then offset by
+/// its inset. The offset moves the box only; a following float is placed as if the first
+/// had not been offset.
+#[test]
+fn relative_float_is_offset_after_placement() {
+    let mut taffy = new_test_tree();
+
+    let float_a = taffy
+        .new_leaf(Style {
+            position: Position::Relative,
+            inset: Rect { left: length(55.0), right: auto(), top: length(30.0), bottom: auto() },
+            ..float_block(72.0, 20.0, Float::Left)
+        })
+        .unwrap();
+    let float_b = taffy.new_leaf(float_block(52.0, 20.0, Float::Left)).unwrap();
+    let root = taffy.new_with_children(root_style(400.0), &[float_a, float_b]).unwrap();
+
+    taffy.compute_layout(root, Size::MAX_CONTENT).unwrap();
+
+    assert_eq!(taffy.layout(float_a).unwrap().location, Point { x: 55.0, y: 30.0 });
+    assert_eq!(taffy.layout(float_b).unwrap().location, Point { x: 72.0, y: 0.0 });
+}
